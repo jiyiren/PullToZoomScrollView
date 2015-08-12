@@ -16,18 +16,25 @@ import android.widget.ScrollView;
  * Created by JIYI on 2015/8/10.
  */
 public class PullToZoomScrollView extends ScrollView{
-    private  boolean isonce;
-    private LinearLayout mParentView;
-    private ViewGroup mTopView;
-    private ViewGroup mDownView;
+    private  boolean isonce;//加载该View的布局时是否是第一次加载，是第一次就让其实现OnMeasure里的代码
 
-    private int mScreenHeight;
-    private int mTopViewHeight;
+    private LinearLayout mParentView;//布局的父布局，ScrollView内部只能有一个根ViewGroup，就是此View
+    private ViewGroup mTopView;//这个是带背景的上半部分的View，下半部分的View用不到的
 
-    private int mCurrentOffset=0;//当前右侧滚轮的偏移量
+    private int mScreenHeight;//整个手机屏幕的高度，这是为了初始化该View时设置mTopView用的
+    private int mTopViewHeight;//这个就是mTopView的高度
 
-    private ObjectAnimator oa;
+    private int mCurrentOffset=0;//当前右侧滚条顶点的偏移量。ScrollView右侧是有滚动条的，当下拉时，
+    //滚动条向上滑，当向下滑动时，滚动条向下滑动。
 
+    private ObjectAnimator oa;//这个是对象动画，这个在本View里很简单，也很独立，就在这里申明一下，后面有两个方法
+    //两个方法是：setT(int t),reset()两个方法用到，其他都和它无关了。
+
+    /**
+     * 初始化获取高度值，并记录
+     * @param context
+     * @param attrs
+     */
     public PullToZoomScrollView(Context context, AttributeSet attrs) {
         super(context, attrs);
         this.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -39,24 +46,28 @@ public class PullToZoomScrollView extends ScrollView{
 
     }
 
+    /**
+     * 将记录的值设置到控件上，并只让控件设置一次
+     * @param widthMeasureSpec
+     * @param heightMeasureSpec
+     */
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         if(!isonce) {
             mParentView = (LinearLayout) this.getChildAt(0);
             mTopView = (ViewGroup) mParentView.getChildAt(0);
-            mDownView= (ViewGroup) mParentView.getChildAt(1);
             mTopView.getLayoutParams().height = mTopViewHeight;
             isonce=true;
         }
     }
 
-    private float startY=0;
-    private boolean isBig;
+    private float startY=0;//向下拉动要放大，手指向下滑时，点击的第一个点的Y坐标
+    private boolean isBig;//是否正在向下拉放大上半部分View
     private boolean isTouchOne;//是否是一次连续的MOVE，默认为false,
     //在MoVe时，如果发现滑动标签位移量为0，则获取此时的Y坐标，作为起始坐标，然后置为true,为了在连续的Move中只获取一次起始坐标
     //当Up弹起时，一次触摸移动完成，将isTouchOne置为false
-    private float distance=0;
+    private float distance=0;//向下滑动到释放的高度差
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         int action =ev.getAction();
@@ -70,7 +81,6 @@ public class PullToZoomScrollView extends ScrollView{
                         isTouchOne=true;
                     }
                     distance=ev.getY()-startY;
-//                    Log.i("jiyi","distance:"+distance);
                     if(distance>0){
                         isBig=true;
                         setT((int)-distance/4);
@@ -88,6 +98,10 @@ public class PullToZoomScrollView extends ScrollView{
         return super.onTouchEvent(ev);
     }
 
+    /**
+     * 对象动画要有的设置方法
+     * @param t
+     */
     public void setT(int t) {
         scrollTo(0, 0);
         if (t < 0) {
@@ -96,6 +110,9 @@ public class PullToZoomScrollView extends ScrollView{
         }
     }
 
+    /**
+     * 主要用于释放手指后的回弹效果
+     */
     private void reset() {
         if (oa != null && oa.isRunning()) {
             return;
@@ -105,18 +122,21 @@ public class PullToZoomScrollView extends ScrollView{
         oa.start();
     }
 
-
+    /**
+     * 这个是设置向上滑动时，上半部分View滑动速度让其小于下半部分
+     * @param l
+     * @param t
+     * @param oldl
+     * @param oldt
+     */
     @Override
     protected void onScrollChanged(int l, int t, int oldl, int oldt) {
         super.onScrollChanged(l, t, oldl, oldt);
         mCurrentOffset = t;//右边滑动标签相对于顶端的偏移量
-
         //当手势上滑，则右侧滚动条下滑，下滑的高度小于TopView的高度，则让TopView的上滑速度小于DownView的上滑速度
         //DownView的上滑速度是滚动条的速度，也就是滚动的距离是右侧滚动条的距离
         //则TopView的速度要小，只需要将右侧滚动条的偏移量也就是t缩小一定倍数就行了。我这里除以2速度减小1倍
         if (t <= mTopViewHeight&&t>=0&&!isBig) {
-//            float scale = t * 1.0f / mTopViewHeight;//0~1
-//            float topscale = 1 - 0.6f * scale;//1-0.4
             mTopView.setTranslationY(t / 2);//使得TopView滑动的速度小于滚轮滚动的速度
         }
         if(isBig){
