@@ -1,5 +1,5 @@
 #1、效果图
-![效果图](http://img.blog.csdn.net/20150812231418851)
+![效果图](http://7xknpe.com1.z0.glb.clouddn.com/GIF2.gif)
 
 #2、实现简介
 ##1、布局结构
